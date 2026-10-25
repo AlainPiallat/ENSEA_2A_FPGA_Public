@@ -1,0 +1,93 @@
+# ===========================================
+# .gitignore pour ENSEA_2A_FPGA_Public
+# Cours FPGA : VHDL, ModelSim, Quartus, Platform Designer (Nios II / Nios V)
+# ===========================================
+
+# ---------- Quartus Prime (Intel / Altera) ----------
+# Fichiers de compilation et de base de données générés
+*.qdf
+*.qws
+*.qpf.bak
+db/
+incremental_db/
+hc_output/
+hps_isw_handoff/
+simulation/
+greybox_tmp/
+*.rpt
+*.summary
+*.done
+*.pin
+*.sof
+*.pof
+*.jic
+*.rbf
+*.sopcinfo.bak
+*.jdi
+*.sld
+*.smsg
+*.map.smsg
+*.cmp.rdb
+*.rdb
+*.hdb
+*.hif
+*.ddb
+*.sip
+*.bsf.bak
+*.qsf.bak
+output_files/
+c5_pin_model_dump.txt
+.qsys_edit/
+*.ip_user_files/
+*.ipx.bak
+
+# ---------- ModelSim / Questa ----------
+work/
+work-*/
+transcript
+transcript.*
+*.wlf
+*.vcd
+*.vcd.gz
+*.fst
+*.lxt
+*.lst
+vsim.wlf
+modelsim.ini
+*.log
+mtiAvm/
+mtiOvm/
+mtiUvm/
+mtiPA/
+qverilog/
+vish_stacktrace.vstf
+.modelsim_*
+
+# ---------- Simulation & fichiers temporaires ----------
+*.tmp
+*.temp
+*.bak
+*~
+*.swp
+*.swo
+*.orig
+*.rej
+*.stackdump
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.python-version
+
+# ---------- Environnements et éditeurs ----------
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+*.code-workspace
