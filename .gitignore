@@ -4,28 +4,20 @@
 # ===========================================
 
 # ---------- Quartus Prime (Intel / Altera) ----------
-# Fichiers de compilation et de base de données générés
-*.qdf
-*.qws
-*.qpf.bak
+# Fichiers et dossiers générés par Quartus Prime
 db/
 incremental_db/
-hc_output/
-hps_isw_handoff/
+output_files/
 simulation/
 greybox_tmp/
-*.rpt
-*.summary
-*.done
-*.pin
-*.sof
-*.pof
-*.jic
+nlp_tmp/
+hc_output/
+hps_isw_handoff/
+*.qdf
+*.qws
 *.rbf
-*.sopcinfo.bak
 *.jdi
 *.sld
-*.smsg
 *.map.smsg
 *.cmp.rdb
 *.rdb
@@ -33,13 +25,32 @@ greybox_tmp/
 *.hif
 *.ddb
 *.sip
-*.bsf.bak
-*.qsf.bak
-output_files/
 c5_pin_model_dump.txt
 .qsys_edit/
 *.ip_user_files/
-*.ipx.bak
+*_sim/
+*_sim.f
+
+# Rapports et journaux de compilation
+*.rpt
+*.smsg
+*.log
+*.chg
+*.pin
+*.done
+*.summary
+
+# Fichiers binaires de programmation et de sortie
+*.sof
+*.pof
+*.jic
+*.hex
+*.eda.rpt
+
+# Fichiers de l'espace de travail et sauvegardes
+*.bak
+*~
+.DS_Store
 
 # ---------- ModelSim / Questa ----------
 work/

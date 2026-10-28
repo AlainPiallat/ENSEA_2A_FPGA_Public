@@ -52,7 +52,110 @@ L'ALU (Arithmetic and Logic Unit) effectue une opération choisie parmi plusieur
 
 3. Code VHDL : le choix de l'opération est fait par une suite de `when ... else` qui teste la valeur de `sel`. Quelques points importants :
    - Les opérandes sont de type `signed`, et on utilise la librairie `numeric_std` qui fournit les opérateurs arithmétiques sur ce type.
-   - La multiplication de deux opérandes sur 8 bits produit un résultat sur 16 bits. Le code le ramène à 8 bits avec `resize(..., 8)`. Cela tronque les résultats trop grands : par exemple `9 * 3 = 27` tient sur 8 bits, c'est nécessaire pour que le résultat tienne sur la sortie `data_out` qui est sur 8 bits (on doit choisir une taille de bus pour l'ALU qui ne dépende pas de l'opération donc on prend la taille des opérandes).
+   - La multiplication de deux opérandes sur 8 bits produit un résultat sur 16 bits. Le code le ramène à 8 bits avec `resize(..., 8)`. Cela tronque les résultats trop grands ce qui les rendra faux, mais c'est nécessaire pour que le résultat tienne sur la sortie `data_out` qui est sur 8 bits (on doit choisir une taille de bus pour l'ALU qui ne dépende pas de l'opération donc on prend la taille des opérandes).
    - La dernière branche `(data_out'range => 'U')` gère les codes de sélection non définis.
 
 4. Test-bench : [alu_tb.vhd](1-tuto_modelsim/alu_tb.vhd) applique les opérandes `9` et `3`, puis parcourt les huit codes de sélection. Pour chaque opération, le signal `theoretical_out` contient le résultat attendu : `12`, `6`, `27`, `3`, `11`, `1`, `10` et `-10`. Le premier cas, `sel = "UUU"`, vérifie le comportement face à une sélection indéterminée. Le script [alu.do](1-tuto_modelsim/alu.do) permet de lancer cette simulation, on affiche les signaux dans la fenêtre `wave` et on peut vérifier que la sortie `data_out` correspond bien à la valeur attendue dans `theoretical_out`.
+
+## Séance 2 : Circuits séquentiels
+
+### La bascule D
+
+1. Une bascule D est un circuit séquentiel qui permet de mémoriser un bit. Elle a une entrée `D` (Data) et une sortie `Q`. Quand l'horloge `clk` passe de 0 à 1 (front montant), la valeur de `D` est copiée dans `Q`. Ainsi, `Q` garde la valeur précédente de `D` jusqu'au prochain front montant de l'horloge. Il existe aussi une sortie complémentaire `Q_bar` qui vaut l'inverse de `Q` mais elle n'est pas toujours nécessaire. On peut aussi ajouter une entrée de réinitialisation `reset` qui force la sortie `Q` à 0 quand elle est activée et une `enable` qui permet d'activer ou désactiver la mémorisation de la bascule.
+
+2. J'ai implémenter le code VHDL de la bascule D dans le fichier [dff.vhd](2-circuits_sequentiels/dff.vhd). 
+
+3. J'ai choisi de faire une bascule D avec toutes les entrées possibles : `D`, `clk`, `reset` et `enable` mais seulement la sortie `Q` est implémentée. Le code est simple : un `process` sensible à `clk` et `reset`, qui teste d'abord si `reset` est activé, puis sur le front montant de l'horloge, si `enable` est activé, on copie la valeur de `D` dans `Q`.
+
+4. Le test-bench [dff_tb.vhd](2-circuits_sequentiels/dff_tb.vhd). Pour le test-bench, on reprend la même structure que pour les composants précédents, cependant on ajoute un `process` (`clk`) qui génère un signal d'horloge en alternant `0` et `1` toutes les 10 ns, jusqu'à ce que le signal `tb_fin` soit activé, alors on passe dans un `wait` infini pour terminer la simulation. Le second `process` (`uut`) applique une séquence de valeurs sur `tb_i_d`, `tb_i_rst` et `tb_i_en`, synchronisée avec l'horloge (`wait until falling_edge(tb_i_clk);`) afin de vérifier le comportement de la bascule D. Le signal `theoretical_q` contient la valeur attendue de la sortie `Q` à chaque étape, et on peut comparer les deux signaux dans la fenêtre `wave` de ModelSim, en bleu pour la sortie `Q` et en violet pour la valeur attendue `theoretical_q`. Le script [dff.do](2-circuits_sequentiels/dff.do) compile les fichiers VHDL, lance la simulation et affiche les signaux dans la fenêtre `wave`.
+
+5. et 6. Les signaux de reset et d'enable ont été rajoutés dès la question 2.
+
+### Registres (séries et parallèles)
+
+1. Schéma registre série vers série de 4 bits : ![TODO](https://img.shields.io/badge/TODO-blue)
+
+2. Schéma Chronogramme du registre série vers série de 4 bits : ![TODO](https://img.shields.io/badge/TODO-blue)
+
+3. Le fichier VHDL pour le registre série est : [fifo.vhd](2-circuits_sequentiels/fifo.vhd). Le nom du composant est `fifo` car les registres série fonctionnent comme des files (FIFO : First In First Out).
+
+4. Les signaux à mettre dans la `liste de sensibilité` sont les signaux qui doivent déclencher l'exécution du `process`. Dans le cas d'un registre série, on veut que la valeur mémorisée change à chaque front montant de l'horloge, donc on met `clk` dans la liste de sensibilité. Et on veut que le registre se réinitialise quand le signal de reset est activé, donc on met aussi `reset` dans la liste de sensibilité.
+
+5. Pour avoir un registre série vers série avec une profondeur configurable, il existe deux méthodes : 
+
+#### Méthode 1 : redéfinir toutes les bascules D dans un même `process` 
+
+```vhdl
+architecture rtl of fifo is
+    signal fifo_r_q: std_logic_vector(FIFO_DEPTH downto 0);
+begin
+    fifo_r_q(0) <= fifo_i_d;
+
+    process(fifo_i_clk, fifo_i_rst)
+    begin
+        if (fifo_i_rst = '1') then
+            fifo_r_q(FIFO_DEPTH downto 1) <= (others => '0');
+        elsif rising_edge(fifo_i_clk) then
+            if (fifo_i_en = '1') then
+                fifo_r_q(FIFO_DEPTH downto 1) <= fifo_r_q(FIFO_DEPTH - 1 downto 0);
+            end if;
+        end if;
+    end process;
+
+    fifo_o_q <= fifo_r_q(FIFO_DEPTH);
+end architecture rtl;
+```
+
+Avec cette méthode, on reprend l'architecture de la bascule D, mais on ajoute un vecteur de signaux `fifo_r_q` qui contient toutes les valeurs mémorisées par le registre. On redéfinit la valeur de chaque bascule D dans le `process`, en décalant les valeurs à chaque front montant de l'horloge.
+
+#### Méthode 2 : instancier plusieurs bascules D dans une boucle `for`
+```vhdl
+architecture rtl of fifo is
+    signal fifo_r_q: std_logic_vector(FIFO_DEPTH downto 0);
+begin
+    fifo_r_q(0) <= fifo_i_d;
+
+    gen_dff: for i in 0 to FIFO_DEPTH-1 generate
+        dff_i: entity work.dff
+            port map (
+                i_clk => fifo_i_clk,
+                i_en => fifo_i_en,
+                i_d => fifo_r_q(i),
+                i_rst => fifo_i_rst,
+                o_q => fifo_r_q(i + 1)
+            );
+    end generate gen_dff;
+
+    fifo_o_q <= fifo_r_q(FIFO_DEPTH);
+end architecture rtl;
+```
+
+C'est cette méthode que j'ai choisie pour implémenter le registre série vers série. Car j'étais parti sur l'idée de réutiliser la bascule D que j'avais déjà implémentée, je suis donc allé chercher sur internet comment instancier un nombre variable d'entités, et j'ai trouvé la méthode de la boucle `for` avec `generate`. Avec cette méthode, on instancie les bascules D une par une, et on relie la sortie de chaque bascule à l'entrée de la suivante. Le signal `fifo_r_q` contient toutes les valeurs mémorisées par le registre, et on peut accéder à la valeur de chaque bascule D avec `fifo_r_q(i)`. Je trouve cette méthode plus intéressante car on ne pourra pas toujours réécrire les codes des composants que l'on veut instancier, et cela peut être intéressant de pouvoir instancier un nombre variable d'entités.
+
+6. J'ai écrit le test-bench [fifo_tb.vhd](2-circuits_sequentiels/fifo_tb.vhd) pour tester le registre série vers série. Le test-bench applique une séquence de valeurs sur l'entrée `fifo_i_d` (`10100...`) après l'activation du enable, et on vérifie que les bascules D commencent à mémoriser les valeurs à partir du moment où le signal `fifo_i_en` est activé. Le signal `theoretical_output` contient la valeur attendue de la sortie `fifo_o_q` à chaque étape, et on peut comparer les deux signaux dans la fenêtre `wave` de ModelSim, en bleu pour la sortie `fifo_o_q` et en violet pour la valeur attendue `theoretical_output`. Le script [fifo.do](2-circuits_sequentiels/fifo.do) lance la simulation et affiche les signaux dans la fenêtre `wave`, par rapport aux précédents composants, j'ai ajouté les signaux internes (en orange) `fifo_r_q(1)`, `fifo_r_q(2)`, `fifo_r_q(3)` et `fifo_r_q(4)` à la fenêtre `wave` de ModelSim, pour voir l'état de chaque bascule D du registre, et on retrouve le chronogramme attendu.
+
+- Fichier VHDL du test-bench : [fifo_tb.vhd](2-circuits_sequentiels/fifo_tb.vhd).
+- Fichier de simulation : [fifo.do](2-circuits_sequentiels/fifo.do).
+
+*Note : avec les deux méthodes, j'ai mis le signal `fifo_i_d` sur le premier élément du vecteur `fifo_r_q(0)`, pour faciliter la lecture du code, comme ça les formules pour les bascules D sont plus simples : `fifo_r_q(i + 1) <= fifo_r_q(i)`. c'est pour ça que dans le fichier de simulation `fifo.do` j'ajoute que les signaux internes `fifo_r_q(1)`, `fifo_r_q(2)`, `fifo_r_q(3)` et `fifo_r_q(4)` à la fenêtre `wave` de ModelSim, pour voir l'état de chaque bascule D du registre.*
+
+### Compteurs
+
+1. Schéma de principe d'un compteur générique : ![TODO](https://img.shields.io/badge/TODO-blue)
+2. Schéma chronogramme d'un compteur 2 bits : ![TODO](https://img.shields.io/badge/TODO-blue)
+3. Le fichier VHDL pour le compteur est : [counter.vhd](2-circuits_sequentiels/counter.vhd).
+4. On implémente le compteur avec un `process` sensible à l'horloge et au reset, et en suivant la structure décrite dans le schéma question 1. On utilise un registre `r_count` pour mémoriser la valeur du compteur, et on met à jour ce signal à chaque front montant de l'horloge, et on utilise un signal interne `s_carry` pour gérer le report de l'incrémentation. La sortie `o_count` est reliée à ce signal interne.
+5. Le test-bench initialise le compteur, puis attend 4 incrémentations, puis reset le compteur, puis le laisse repartir pour 1 incrémentation afin de vérifier que le compteur repart bien après un reset.
+
+- Le test-bench [counter_tb.vhd](2-circuits_sequentiels/counter_tb.vhd). 
+- Le script [counter.do](2-circuits_sequentiels/counter.do).
+
+### FSM
+
+1. `r_state` est initialisé car c'est un registre qui doit mémoriser l'état courant, il a une valeur stable entre deux front d'horloge et il est remis à zéro lors du reset, alors que s_next_state est un signal combinatoire qui n'a donc pas besoin d'être initialisé et est recalculé en permanence.
+2. Pour le premier process, la liste de sensibilité contient `i_clk` et `i_rst_n` car il faut que le process s'exécute quand l'horloge change pour passer à l'état suivant, et quand le reset est activé pour revenir à l'état initial. 
+    Pour le second process, la liste de sensibilité contient `r_state`, `i_p50` et `i_p100` car il faut que le signal `s_next_state` soit recalculé à chaque changement d'un des signaux qui influencent la transition d'état afin d'être toujours à jour.
+3. Schéma d'architecture de la FSM : ![TODO](https://img.shields.io/badge/TODO-blue)
+4. Lien entre le code et le schéma : ![TODO](https://img.shields.io/badge/TODO-blue)
+5. Schéma graphe d'état du séquenceur : ![TODO](https://img.shields.io/badge/TODO-blue)
+6. Chronogramme du séquenceur complété : ![TODO](https://img.shields.io/badge/TODO-blue)
